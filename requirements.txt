@@ -1,3 +1,7 @@
 wandb
-weave
+weave~=0.50.14
 dotenv
+
+python-dotenv~=1.0.1
+datasets~=2.21.0
+openai~=1.39.0
