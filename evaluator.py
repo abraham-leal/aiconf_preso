@@ -1,11 +1,11 @@
+import asyncio
+
 import weave
 from weave import Dataset
 from openai import ChatCompletion
-from weave.trace_server import trace_server_interface as tsi
+import model_service as ms
 
 client = weave.init("abe_aiconf_llama31_8B_prompteng")
-
-
 @weave.op()
 def gen_weave_dataset_from_traces():
     pos_feedback = client.feedback(reaction="👍")
@@ -59,11 +59,23 @@ def success_in_timekeeping_scorer(messages, model_output):
 
 
 def evaluate_and_score():
+    model_base = ms.Llama_31_8B_Model()
+    eval_pos_dataset: weave.Dataset = (weave.
+    ref("weave:///wandb-smle/abe_aiconf_llama31_8b_prompteng/object/Positive Feedback Interactions:Iilp5hPOJVNzT4QbqxB6zHwMDLyDY1byz1PmPjo72eU").get())
 
+    print("Evaluating:...")
+    evaluation = weave.Evaluation(
+        name="Initial Evaluation of LLM Performance",
+        dataset=eval_pos_dataset,
+        scorers=[
+            success_in_timekeeping_scorer
+        ],
+    )
+    asyncio.run(evaluation.evaluate(model_base))
 
 def main():
     #gen_weave_dataset_from_traces()
-    pass
+    evaluate_and_score()
 
 
 if __name__ == '__main__':
