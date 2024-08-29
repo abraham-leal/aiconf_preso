@@ -7,13 +7,13 @@ import orchestrator
 load_dotenv()
 
 class Llama_31_8B_Model(weave.Model):
-
+    context: str
     @weave.op()
-    def _call_openrouter(self, model, messages):
-        or_client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.getenv("OR_API_KEY"))
+    def _call_oai(self, model, messages):
+        oai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         try:
-            completion = or_client.chat.completions.create(
+            completion = oai_client.chat.completions.create(
                 model=model,
                 messages=messages,
                 temperature=0.0,
@@ -26,16 +26,12 @@ class Llama_31_8B_Model(weave.Model):
         return completion
 
     @weave.op()
-    def call_llama(self, messages):
-        return self._call_openrouter("meta-llama/llama-3.1-8b-instruct:free", messages)
+    def call_oai(self, messages):
+        return self._call_oai("gpt-4o-mini", messages)
 
     @weave.op()
     def predict(self, messages: []):
-        context = """
-                    You are a general purpose assistant. Answer the following question to the best of your knowledge.
-                    """
+        sys_messages = [orchestrator.build_message("system", self.context), messages]
 
-        sys_messages = [orchestrator.build_message("system", context), messages]
-
-        return self.call_llama(sys_messages)
+        return self.call_oai(sys_messages)
 
