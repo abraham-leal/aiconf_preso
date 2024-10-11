@@ -1,5 +1,5 @@
-wandb==0.17.8
-weave==0.50.14
+wandb==0.18.2
+weave==0.51.12
 python-dotenv==1.0.1
 datasets==2.21.0
 openai==1.39.0

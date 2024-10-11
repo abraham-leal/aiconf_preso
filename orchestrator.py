@@ -8,7 +8,7 @@ import prompt_impv_service as pis
 
 load_dotenv()
 
-client = weave.init("aiconf_auto_prompt_eng")
+client = weave.init("wandb-smle/WB_Weave_NVIDIA_NIMs_DEMO")
 
 
 def main():
@@ -21,12 +21,14 @@ def main():
 
 @weave.op()
 def orchestrate(base_prompt: str, itr_samples: int):
-    model = ms.Llama_31_8B_Model(context=base_prompt)
+    model = ms.NIM_Llama3(context=base_prompt)
+    model31 = ms.NIM_Llama31(context=base_prompt)
     feedback_mod = fs.Feedback_Service_Model_GPT4oMini()
     prompt_imp_mod = pis.PromptImp_Servicel_GPT4o()
 
-    ds = load_dataset("mosaicml/dolly_hhrlhf", split="train")
-    iter = ds.iter(batch_size=1)
+    ds = load_dataset("mosaicml/dolly_hhrlhf", split="test")
+    suffled_ds = ds.shuffle()
+    iter = suffled_ds.iter(batch_size=1)
     counter = 0
     for obj in iter:
         counter += 1
@@ -37,26 +39,40 @@ def orchestrate(base_prompt: str, itr_samples: int):
         label = obj["response"][0]
 
         messages = build_message("user", prompt)
-        completion, orig_call = model.predict.call(messages)
+        completion, orig_call = model.predict.call(model, messages)
+        completion31, orig_call31 = model31.predict.call(model31, messages)
 
         msg_for_feedback = build_message("user", f"""
         prompt: {prompt}
         ideal_answer: {label}
         answer: {completion.choices[0].message.content}
             """)
+        msg_for_feedback31 = build_message("user", f"""
+                prompt: {prompt}
+                ideal_answer: {label}
+                answer: {completion31.choices[0].message.content}
+                    """)
 
         feedback_completion = feedback_mod.predict(msg_for_feedback)
-        print(feedback_completion.choices[0].message.content)
+        feedback_completion31 = feedback_mod.predict(msg_for_feedback31)
+
 
         if "👍" in feedback_completion.choices[0].message.content:
             orig_call.feedback.add_reaction("👍")
         else:
             orig_call.feedback.add_reaction("👎")
 
+        if "👍" in feedback_completion31.choices[0].message.content:
+            orig_call31.feedback.add_reaction("👍")
+        else:
+            orig_call31.feedback.add_reaction("👎")
+
         if counter >= itr_samples:
             break
 
-    eval.evaluate_and_score(base_prompt=base_prompt, client=client)
+    pos_dataset, neg_dataset = eval.gen_weave_dataset_from_traces(client)
+    eval.evaluate_and_score(model, pos_dataset, neg_dataset)
+    eval.evaluate_and_score(model31, pos_dataset, neg_dataset)
 
     return prompt_imp_mod.predict(build_message("user", base_prompt)).choices[0].message.content
 
