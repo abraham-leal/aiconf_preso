@@ -1,13 +1,11 @@
 import asyncio
 import os
-
-from weave.flow.scorer import Scorer
-
 import orchestrator as orc
 import weave
 from weave import Dataset
 from openai import ChatCompletion
 from openai import OpenAI
+from weave.flow.scorer import Scorer
 from dotenv import load_dotenv
 
 load_dotenv()
